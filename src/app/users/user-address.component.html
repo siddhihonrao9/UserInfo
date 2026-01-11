@@ -1,0 +1,33 @@
+<h3>User Addresses</h3>
+
+<form [formGroup]="addressForm" (ngSubmit)="saveAddress()">
+
+  <textarea
+    formControlName="fullAddress"
+    placeholder="Enter full address"
+    rows="3">
+  </textarea>
+
+  <div *ngIf="addressForm.get('fullAddress')?.touched &&
+              addressForm.get('fullAddress')?.invalid">
+    Address is required
+  </div>
+
+  <button type="submit">Add Address</button>
+</form>
+
+<hr />
+
+<table>
+  <tr>
+    <th>Full Address</th>
+    <th>Action</th>
+  </tr>
+
+  <tr *ngFor="let a of addresses">
+    <td>{{ a.fullAddress }}</td>
+    <td>
+      <button (click)="deleteAddress(a.addressId!)">Delete</button>
+    </td>
+  </tr>
+</table>
