@@ -13,7 +13,7 @@ export interface ChangePasswordRequest {
 })
 export class UserService {
 
-  private apiUrl = 'https://userinfo-app-1mrn.onrender.com/api/users';
+  private apiUrl = 'https://prodcomtech-assignment-siddhi-1-0.onrender.com/api/users';
 
   constructor(private http: HttpClient) { }
 

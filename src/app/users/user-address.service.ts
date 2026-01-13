@@ -6,7 +6,7 @@ import { UserAddress } from './user-address.model';
 @Injectable({ providedIn: 'root' })
 export class UserAddressService {
 
-  private baseUrl = 'https://userinfo-app-1mrn.onrender.com/api/addresses';
+  private baseUrl = 'https://prodcomtech-assignment-siddhi-1-0.onrender.com/api/addresses';
 
   constructor(private http: HttpClient) { }
 

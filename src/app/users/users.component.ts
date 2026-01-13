@@ -32,22 +32,11 @@ export class UsersComponent implements OnInit {
   // =========================
   userForm!: FormGroup;
   passwordForm!: FormGroup;
-
-  // =========================
-  // PASSWORD MODAL
-  // =========================
   showPasswordModal = false;
   selectedUserId!: number;
-
-  // =========================
-  // TOASTS
-  // =========================
   toasts: Toast[] = [];
   toastId = 0;
 
-  // =========================
-  // LOADER
-  // =========================
   isLoading = false;
 
   constructor(
