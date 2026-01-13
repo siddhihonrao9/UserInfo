@@ -45,9 +45,6 @@ export class UsersComponent implements OnInit {
     private userAddressService: UserAddressService
   ) { }
 
-  // =========================
-  // INIT
-  // =========================
   ngOnInit(): void {
     this.initUserForm();
     this.initPasswordForm();
