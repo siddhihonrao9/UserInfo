@@ -36,26 +36,23 @@ export class UsersComponent implements OnInit {
   toasts: Toast[] = [];
   toastId = 0;
   isLoading = false;
-  submitted = false;
-
 
   passwordStrengthValidator: ValidatorFn = (
     control: AbstractControl
   ): ValidationErrors | null => {
-    const value = control.value;
-    if (!value) return null;
-    const pattern =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
-    return pattern.test(value) ? null : { weakPassword: true };
+    if (!control.value) return null;
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/.test(control.value)
+      ? null
+      : { weakPassword: true };
   };
 
   phoneNumberValidator: ValidatorFn = (
     control: AbstractControl
   ): ValidationErrors | null => {
-    const value = control.value;
-    if (!value) return null;
-    const pattern = /^[6-9]\d{9}$/;
-    return pattern.test(value) ? null : { invalidPhone: true };
+    if (!control.value) return null;
+    return /^[6-9]\d{9}$/.test(control.value)
+      ? null
+      : { invalidPhone: true };
   };
 
   constructor(
@@ -92,10 +89,11 @@ export class UsersComponent implements OnInit {
     );
   }
 
-  passwordMatchValidator(form: AbstractControl): ValidationErrors | null {
-    const newPassword = form.get('newPassword')?.value;
-    const confirmPassword = form.get('confirmPassword')?.value;
-    return newPassword === confirmPassword ? null : { passwordMismatch: true };
+  passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
+    return control.get('newPassword')?.value ===
+      control.get('confirmPassword')?.value
+      ? null
+      : { passwordMismatch: true };
   }
 
   get addresses(): FormArray {
@@ -131,14 +129,53 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  saveUser(): void {
-    this.submitted = true;
+  // =========================
+  // 🔥 TOAST VALIDATION
+  // =========================
+  validateFormWithToast(): boolean {
 
-    if (this.userForm.invalid) {
-      this.userForm.markAllAsTouched();
-      this.showToast('Please fix form errors', 'info');
-      return;
+    if (this.userForm.get('userName')?.invalid) {
+      this.showToast('Name is required', 'error');
+      return false;
     }
+
+    if (this.userForm.get('userPhoneNumber')?.errors?.['required']) {
+      this.showToast('Phone number is required', 'error');
+      return false;
+    }
+
+    if (this.userForm.get('userPhoneNumber')?.errors?.['invalidPhone']) {
+      this.showToast('Enter valid 10-digit Indian mobile number', 'error');
+      return false;
+    }
+
+    if (!this.editingUserId) {
+      if (this.userForm.get('userPassword')?.errors?.['required']) {
+        this.showToast('Password is required', 'error');
+        return false;
+      }
+
+      if (this.userForm.get('userPassword')?.errors?.['weakPassword']) {
+        this.showToast(
+          'Password must be 8+ chars with uppercase, lowercase, number & symbol',
+          'error'
+        );
+        return false;
+      }
+    }
+
+    for (let i = 0; i < this.addresses.length; i++) {
+      if (this.addresses.at(i).get('fullAddress')?.invalid) {
+        this.showToast(`Address ${i + 1} is required`, 'error');
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  saveUser(): void {
+    if (!this.validateFormWithToast()) return;
 
     this.isLoading = true;
     const { userPassword, addresses, ...userPayload } = this.userForm.value;
@@ -190,15 +227,19 @@ export class UsersComponent implements OnInit {
 
   editUser(u: User): void {
     this.editingUserId = u.userId;
+
     if (this.userForm.get('userPassword')) {
       this.userForm.removeControl('userPassword');
     }
+
     this.userForm.patchValue({
       userName: u.userName,
       userPhoneNumber: u.userPhoneNumber,
       status: u.status
     });
+
     this.addresses.clear();
+
     this.userAddressService.getAddressesByUser(u.userId!).subscribe({
       next: addresses => {
         addresses.forEach((a: any) =>
@@ -237,7 +278,14 @@ export class UsersComponent implements OnInit {
   }
 
   changePassword(): void {
-    if (this.passwordForm.invalid) return;
+    if (this.passwordForm.invalid) {
+      if (this.passwordForm.errors?.['passwordMismatch']) {
+        this.showToast('Passwords do not match', 'error');
+      } else {
+        this.showToast('Invalid password details', 'error');
+      }
+      return;
+    }
 
     const payload = {
       oldPassword: this.passwordForm.value.oldPassword,
@@ -256,7 +304,6 @@ export class UsersComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.submitted = false;
     this.editingUserId = undefined;
 
     if (!this.userForm.get('userPassword')) {
