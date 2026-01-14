@@ -36,6 +36,8 @@ export class UsersComponent implements OnInit {
   toasts: Toast[] = [];
   toastId = 0;
   isLoading = false;
+  submitted = false;
+
 
   passwordStrengthValidator: ValidatorFn = (
     control: AbstractControl
@@ -130,6 +132,8 @@ export class UsersComponent implements OnInit {
   }
 
   saveUser(): void {
+    this.submitted = true;
+
     if (this.userForm.invalid) {
       this.userForm.markAllAsTouched();
       this.showToast('Please fix form errors', 'info');
@@ -252,6 +256,7 @@ export class UsersComponent implements OnInit {
   }
 
   resetForm(): void {
+    this.submitted = false;
     this.editingUserId = undefined;
 
     if (!this.userForm.get('userPassword')) {
