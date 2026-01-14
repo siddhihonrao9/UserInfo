@@ -11,18 +11,12 @@ export class UserAddressService {
 
   constructor(private http: HttpClient) { }
 
-  // =========================
-  // GET ADDRESSES BY USER
-  // =========================
   getAddressesByUser(userId: number): Observable<UserAddress[]> {
     return this.http.get<UserAddress[]>(
       `${this.baseUrl}/${userId}/addresses`
     );
   }
 
-  // =========================
-  // SAVE / UPDATE ADDRESSES (BULK)
-  // =========================
   saveAddresses(
     userId: number,
     addresses: UserAddress[]
@@ -33,9 +27,6 @@ export class UserAddressService {
     );
   }
 
-  // =========================
-  // DELETE SINGLE ADDRESS
-  // =========================
   deleteAddress(
     userId: number,
     addressId: number

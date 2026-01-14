@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import {
+  AbstractControl,
   FormArray,
   FormBuilder,
-  FormControl,
   FormGroup,
   ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
   Validators
 } from '@angular/forms';
 
@@ -22,27 +24,37 @@ import { UserService } from './user.service';
 })
 export class UsersComponent implements OnInit {
 
-  // =========================
-  // DATA
-  // =========================
   users: User[] = [];
   editingUserId?: number;
 
-  // =========================
-  // FORMS
-  // =========================
   userForm!: FormGroup;
   passwordForm!: FormGroup;
 
   showPasswordModal = false;
   selectedUserId!: number;
 
-  // =========================
-  // UI STATE
-  // =========================
   toasts: Toast[] = [];
   toastId = 0;
   isLoading = false;
+
+  passwordStrengthValidator: ValidatorFn = (
+    control: AbstractControl
+  ): ValidationErrors | null => {
+    const value = control.value;
+    if (!value) return null;
+    const pattern =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+    return pattern.test(value) ? null : { weakPassword: true };
+  };
+
+  phoneNumberValidator: ValidatorFn = (
+    control: AbstractControl
+  ): ValidationErrors | null => {
+    const value = control.value;
+    if (!value) return null;
+    const pattern = /^[6-9]\d{9}$/;
+    return pattern.test(value) ? null : { invalidPhone: true };
+  };
 
   constructor(
     private fb: FormBuilder,
@@ -53,18 +65,15 @@ export class UsersComponent implements OnInit {
   ngOnInit(): void {
     this.initUserForm();
     this.initPasswordForm();
-    this.addAddress(); // at least one address
+    this.addAddress();
     this.loadUsers();
   }
 
-  // =========================
-  // FORM INIT
-  // =========================
   initUserForm(): void {
     this.userForm = this.fb.group({
       userName: ['', Validators.required],
-      userPhoneNumber: ['', Validators.required],
-      userPassword: ['', [Validators.required, Validators.minLength(6)]], // CREATE ONLY
+      userPhoneNumber: ['', [Validators.required, this.phoneNumberValidator]],
+      userPassword: ['', [Validators.required, this.passwordStrengthValidator]],
       status: ['ACTIVE', Validators.required],
       addresses: this.fb.array([])
     });
@@ -74,23 +83,19 @@ export class UsersComponent implements OnInit {
     this.passwordForm = this.fb.group(
       {
         oldPassword: ['', Validators.required],
-        newPassword: ['', [Validators.required, Validators.minLength(6)]],
+        newPassword: ['', [Validators.required, this.passwordStrengthValidator]],
         confirmPassword: ['', Validators.required]
       },
       { validators: this.passwordMatchValidator }
     );
   }
 
-  passwordMatchValidator(form: FormGroup) {
-    return form.get('newPassword')?.value ===
-      form.get('confirmPassword')?.value
-      ? null
-      : { passwordMismatch: true };
+  passwordMatchValidator(form: AbstractControl): ValidationErrors | null {
+    const newPassword = form.get('newPassword')?.value;
+    const confirmPassword = form.get('confirmPassword')?.value;
+    return newPassword === confirmPassword ? null : { passwordMismatch: true };
   }
 
-  // =========================
-  // FORM ARRAY HELPERS
-  // =========================
   get addresses(): FormArray {
     return this.userForm.get('addresses') as FormArray;
   }
@@ -110,14 +115,10 @@ export class UsersComponent implements OnInit {
     this.addresses.removeAt(index);
   }
 
-  // =========================
-  // LOAD USERS
-  // =========================
   loadUsers(): void {
     this.isLoading = true;
-
     this.userService.getUsers().subscribe({
-      next: (data) => {
+      next: data => {
         this.users = data;
         this.isLoading = false;
       },
@@ -128,9 +129,6 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  // =========================
-  // SAVE USER
-  // =========================
   saveUser(): void {
     if (this.userForm.invalid) {
       this.userForm.markAllAsTouched();
@@ -139,10 +137,8 @@ export class UsersComponent implements OnInit {
     }
 
     this.isLoading = true;
-
     const { userPassword, addresses, ...userPayload } = this.userForm.value;
 
-    // -------- UPDATE USER --------
     if (this.editingUserId) {
       this.userService.updateUser(this.editingUserId, userPayload).subscribe({
         next: () => this.saveAddresses(this.editingUserId!, true),
@@ -151,14 +147,10 @@ export class UsersComponent implements OnInit {
           this.isLoading = false;
         }
       });
-    }
-
-    // -------- CREATE USER --------
-    else {
+    } else {
       const createPayload = { ...userPayload, userPassword };
-
       this.userService.createUser(createPayload).subscribe({
-        next: (createdUser) => {
+        next: createdUser => {
           if (!createdUser.userId) {
             this.showToast('User created but ID missing', 'error');
             this.isLoading = false;
@@ -174,50 +166,37 @@ export class UsersComponent implements OnInit {
     }
   }
 
-  // =========================
-  // SAVE ADDRESSES
-  // =========================
   saveAddresses(userId: number, isUpdate: boolean): void {
-    this.userAddressService
-      .saveAddresses(userId, this.addresses.value)
-      .subscribe({
-        next: () => {
-          this.showToast(
-            isUpdate ? 'User updated successfully' : 'User created successfully',
-            'success'
-          );
-          this.resetForm();
-          this.loadUsers();
-          this.isLoading = false;
-        },
-        error: () => {
-          this.showToast('Failed to save addresses', 'error');
-          this.isLoading = false;
-        }
-      });
+    this.userAddressService.saveAddresses(userId, this.addresses.value).subscribe({
+      next: () => {
+        this.showToast(
+          isUpdate ? 'User updated successfully' : 'User created successfully',
+          'success'
+        );
+        this.resetForm();
+        this.loadUsers();
+        this.isLoading = false;
+      },
+      error: () => {
+        this.showToast('Failed to save addresses', 'error');
+        this.isLoading = false;
+      }
+    });
   }
 
-  // =========================
-  // EDIT USER
-  // =========================
   editUser(u: User): void {
     this.editingUserId = u.userId;
-
-    // Remove password field
     if (this.userForm.get('userPassword')) {
       this.userForm.removeControl('userPassword');
     }
-
     this.userForm.patchValue({
       userName: u.userName,
       userPhoneNumber: u.userPhoneNumber,
       status: u.status
     });
-
     this.addresses.clear();
-
     this.userAddressService.getAddressesByUser(u.userId!).subscribe({
-      next: (addresses) => {
+      next: addresses => {
         addresses.forEach((a: any) =>
           this.addresses.push(this.createAddress(a))
         );
@@ -228,12 +207,8 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  // =========================
-  // DELETE USER
-  // =========================
   deleteUser(id: number): void {
     this.isLoading = true;
-
     this.userService.deleteUser(id).subscribe({
       next: () => {
         this.showToast('User deleted successfully', 'success');
@@ -247,9 +222,6 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  // =========================
-  // PASSWORD
-  // =========================
   openPasswordModal(user: User): void {
     this.selectedUserId = user.userId!;
     this.passwordForm.reset();
@@ -279,18 +251,15 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  // =========================
-  // RESET
-  // =========================
   resetForm(): void {
     this.editingUserId = undefined;
 
     if (!this.userForm.get('userPassword')) {
       this.userForm.addControl(
         'userPassword',
-        new FormControl('', [
+        this.fb.control('', [
           Validators.required,
-          Validators.minLength(6)
+          this.passwordStrengthValidator
         ])
       );
     }
@@ -306,13 +275,7 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  // =========================
-  // TOASTS
-  // =========================
-  showToast(
-    message: string,
-    type: 'success' | 'error' | 'info' = 'info'
-  ): void {
+  showToast(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
     const id = ++this.toastId;
     this.toasts.push({ id, message, type });
     setTimeout(() => this.removeToast(id), 3000);
