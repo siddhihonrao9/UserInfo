@@ -84,7 +84,7 @@
           </label>
         </div>
 
-        <!-- Password (ONLY FOR CREATE) -->
+        <!-- Password (CREATE ONLY) -->
         <div *ngIf="!editingUserId" class="relative">
           <input
             formControlName="userPassword"
@@ -97,15 +97,43 @@
           </label>
         </div>
 
-        <!-- Address -->
-        <div class="relative">
-          <textarea
-            formControlName="fullAddress"
-            rows="3"
-            class="w-full px-4 py-3 border border-slate-200
-                   rounded-xl outline-none resize-none"
-            placeholder="Full Address"
-          ></textarea>
+        <!-- ================= ADDRESSES ================= -->
+        <div formArrayName="addresses" class="space-y-3">
+          <label class="text-sm font-medium text-slate-700">
+            Addresses
+          </label>
+
+          <div
+            *ngFor="let addr of addresses.controls; let i = index"
+            [formGroupName]="i"
+            class="flex gap-2"
+          >
+            <textarea
+              formControlName="fullAddress"
+              rows="2"
+              class="flex-1 px-4 py-2 border border-slate-200
+                     rounded-xl outline-none resize-none"
+              placeholder="Full Address"
+            ></textarea>
+
+            <button
+              type="button"
+              (click)="removeAddress(i)"
+              class="px-3 py-2 bg-rose-500 text-white
+                     rounded-xl hover:bg-rose-600"
+            >
+              ✕
+            </button>
+          </div>
+
+          <button
+            type="button"
+            (click)="addAddress()"
+            class="px-4 py-2 bg-indigo-100 text-indigo-700
+                   rounded-xl hover:bg-indigo-200"
+          >
+            + Add Address
+          </button>
         </div>
 
         <!-- Status -->
@@ -145,7 +173,6 @@
             {{ editingUserId ? 'Update User' : 'Create User' }}
           </button>
 
-          <!-- ADD USER (VISIBLE ONLY WHEN EDITING) -->
           <button
             *ngIf="editingUserId"
             type="button"

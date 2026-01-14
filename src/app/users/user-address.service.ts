@@ -6,19 +6,42 @@ import { UserAddress } from './user-address.model';
 @Injectable({ providedIn: 'root' })
 export class UserAddressService {
 
-  private baseUrl = 'https://prodcomtech-assignment-siddhi-1-0.onrender.com/api/addresses';
+  private baseUrl =
+    'https://prodcomtech-assignment-siddhi-1-0.onrender.com/api/users';
 
   constructor(private http: HttpClient) { }
 
-  addAddress(userId: number, address: UserAddress): Observable<UserAddress> {
-    return this.http.post<UserAddress>(`${this.baseUrl}/${userId}`, address);
-  }
-
+  // =========================
+  // GET ADDRESSES BY USER
+  // =========================
   getAddressesByUser(userId: number): Observable<UserAddress[]> {
-    return this.http.get<UserAddress[]>(`${this.baseUrl}/user/${userId}`);
+    return this.http.get<UserAddress[]>(
+      `${this.baseUrl}/${userId}/addresses`
+    );
   }
 
-  deleteAddress(addressId: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${addressId}`);
+  // =========================
+  // SAVE / UPDATE ADDRESSES (BULK)
+  // =========================
+  saveAddresses(
+    userId: number,
+    addresses: UserAddress[]
+  ): Observable<void> {
+    return this.http.post<void>(
+      `${this.baseUrl}/${userId}/addresses`,
+      addresses
+    );
+  }
+
+  // =========================
+  // DELETE SINGLE ADDRESS
+  // =========================
+  deleteAddress(
+    userId: number,
+    addressId: number
+  ): Observable<void> {
+    return this.http.delete<void>(
+      `${this.baseUrl}/${userId}/addresses/${addressId}`
+    );
   }
 }

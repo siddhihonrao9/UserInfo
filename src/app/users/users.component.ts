@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import {
+  FormArray,
   FormBuilder,
   FormControl,
   FormGroup,
@@ -32,11 +33,15 @@ export class UsersComponent implements OnInit {
   // =========================
   userForm!: FormGroup;
   passwordForm!: FormGroup;
+
   showPasswordModal = false;
   selectedUserId!: number;
+
+  // =========================
+  // UI STATE
+  // =========================
   toasts: Toast[] = [];
   toastId = 0;
-
   isLoading = false;
 
   constructor(
@@ -48,6 +53,7 @@ export class UsersComponent implements OnInit {
   ngOnInit(): void {
     this.initUserForm();
     this.initPasswordForm();
+    this.addAddress(); // at least one address
     this.loadUsers();
   }
 
@@ -58,9 +64,9 @@ export class UsersComponent implements OnInit {
     this.userForm = this.fb.group({
       userName: ['', Validators.required],
       userPhoneNumber: ['', Validators.required],
-      userPassword: ['', [Validators.required, Validators.minLength(6)]], // only for CREATE
+      userPassword: ['', [Validators.required, Validators.minLength(6)]], // CREATE ONLY
       status: ['ACTIVE', Validators.required],
-      fullAddress: ['', Validators.required]
+      addresses: this.fb.array([])
     });
   }
 
@@ -80,6 +86,28 @@ export class UsersComponent implements OnInit {
       form.get('confirmPassword')?.value
       ? null
       : { passwordMismatch: true };
+  }
+
+  // =========================
+  // FORM ARRAY HELPERS
+  // =========================
+  get addresses(): FormArray {
+    return this.userForm.get('addresses') as FormArray;
+  }
+
+  createAddress(address?: { addressId?: number; fullAddress: string }): FormGroup {
+    return this.fb.group({
+      addressId: [address?.addressId ?? null],
+      fullAddress: [address?.fullAddress ?? '', Validators.required]
+    });
+  }
+
+  addAddress(): void {
+    this.addresses.push(this.createAddress());
+  }
+
+  removeAddress(index: number): void {
+    this.addresses.removeAt(index);
   }
 
   // =========================
@@ -112,30 +140,22 @@ export class UsersComponent implements OnInit {
 
     this.isLoading = true;
 
-    const { fullAddress, userPassword, ...userPayload } =
-      this.userForm.value;
+    const { userPassword, addresses, ...userPayload } = this.userForm.value;
 
-    // -------- UPDATE USER (NO PASSWORD) --------
+    // -------- UPDATE USER --------
     if (this.editingUserId) {
-      this.userService
-        .updateUser(this.editingUserId, userPayload)
-        .subscribe({
-          next: () => {
-            this.saveAddress(this.editingUserId!, fullAddress, true);
-          },
-          error: () => {
-            this.showToast('Failed to update user', 'error');
-            this.isLoading = false;
-          }
-        });
+      this.userService.updateUser(this.editingUserId, userPayload).subscribe({
+        next: () => this.saveAddresses(this.editingUserId!, true),
+        error: () => {
+          this.showToast('Failed to update user', 'error');
+          this.isLoading = false;
+        }
+      });
     }
 
-    // -------- CREATE USER (WITH PASSWORD) --------
+    // -------- CREATE USER --------
     else {
-      const createPayload = {
-        ...userPayload,
-        userPassword
-      };
+      const createPayload = { ...userPayload, userPassword };
 
       this.userService.createUser(createPayload).subscribe({
         next: (createdUser) => {
@@ -144,7 +164,7 @@ export class UsersComponent implements OnInit {
             this.isLoading = false;
             return;
           }
-          this.saveAddress(createdUser.userId, fullAddress, false);
+          this.saveAddresses(createdUser.userId, false);
         },
         error: () => {
           this.showToast('Failed to create user', 'error');
@@ -155,28 +175,26 @@ export class UsersComponent implements OnInit {
   }
 
   // =========================
-  // SAVE ADDRESS
+  // SAVE ADDRESSES
   // =========================
-  saveAddress(
-    userId: number,
-    fullAddress: string,
-    isUpdate: boolean
-  ): void {
-    this.userAddressService.addAddress(userId, { fullAddress }).subscribe({
-      next: () => {
-        this.showToast(
-          isUpdate ? 'User updated successfully' : 'User created successfully',
-          'success'
-        );
-        this.resetForm();
-        this.loadUsers();
-        this.isLoading = false;
-      },
-      error: () => {
-        this.showToast('Address save failed', 'error');
-        this.isLoading = false;
-      }
-    });
+  saveAddresses(userId: number, isUpdate: boolean): void {
+    this.userAddressService
+      .saveAddresses(userId, this.addresses.value)
+      .subscribe({
+        next: () => {
+          this.showToast(
+            isUpdate ? 'User updated successfully' : 'User created successfully',
+            'success'
+          );
+          this.resetForm();
+          this.loadUsers();
+          this.isLoading = false;
+        },
+        error: () => {
+          this.showToast('Failed to save addresses', 'error');
+          this.isLoading = false;
+        }
+      });
   }
 
   // =========================
@@ -185,7 +203,7 @@ export class UsersComponent implements OnInit {
   editUser(u: User): void {
     this.editingUserId = u.userId;
 
-    // Remove password control for EDIT
+    // Remove password field
     if (this.userForm.get('userPassword')) {
       this.userForm.removeControl('userPassword');
     }
@@ -193,22 +211,19 @@ export class UsersComponent implements OnInit {
     this.userForm.patchValue({
       userName: u.userName,
       userPhoneNumber: u.userPhoneNumber,
-      status: u.status,
-      fullAddress: ''
+      status: u.status
     });
 
-    if (!u.userId) return;
+    this.addresses.clear();
 
-    this.userAddressService.getAddressesByUser(u.userId).subscribe({
+    this.userAddressService.getAddressesByUser(u.userId!).subscribe({
       next: (addresses) => {
-        if (addresses?.length) {
-          this.userForm.patchValue({
-            fullAddress: addresses[0].fullAddress
-          });
-        }
+        addresses.forEach((a: any) =>
+          this.addresses.push(this.createAddress(a))
+        );
       },
       error: () => {
-        this.showToast('Failed to load address', 'error');
+        this.showToast('Failed to load addresses', 'error');
       }
     });
   }
@@ -233,7 +248,7 @@ export class UsersComponent implements OnInit {
   }
 
   // =========================
-  // CHANGE PASSWORD
+  // PASSWORD
   // =========================
   openPasswordModal(user: User): void {
     this.selectedUserId = user.userId!;
@@ -265,12 +280,11 @@ export class UsersComponent implements OnInit {
   }
 
   // =========================
-  // RESET FORM
+  // RESET
   // =========================
   resetForm(): void {
     this.editingUserId = undefined;
 
-    // Re-add password control for CREATE
     if (!this.userForm.get('userPassword')) {
       this.userForm.addControl(
         'userPassword',
@@ -281,12 +295,14 @@ export class UsersComponent implements OnInit {
       );
     }
 
+    this.addresses.clear();
+    this.addAddress();
+
     this.userForm.reset({
       userName: '',
       userPhoneNumber: '',
       userPassword: '',
-      status: 'ACTIVE',
-      fullAddress: ''
+      status: 'ACTIVE'
     });
   }
 
@@ -299,10 +315,7 @@ export class UsersComponent implements OnInit {
   ): void {
     const id = ++this.toastId;
     this.toasts.push({ id, message, type });
-
-    setTimeout(() => {
-      this.removeToast(id);
-    }, 3000);
+    setTimeout(() => this.removeToast(id), 3000);
   }
 
   removeToast(id: number): void {
