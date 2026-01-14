@@ -15,10 +15,7 @@
 </div>
 
 <!-- ================= LOADER ================= -->
-<div
-  *ngIf="isLoading"
-  class="fixed inset-0 z-50 flex items-center justify-center bg-white/80"
->
+<div *ngIf="isLoading" class="fixed inset-0 z-50 flex items-center justify-center bg-white/80">
   <div class="h-12 w-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
 </div>
 
@@ -40,10 +37,9 @@
             formControlName="userName"
             type="text"
             placeholder="Name"
-            class="w-full px-4 py-2 border rounded-xl"
-            [ngClass]="{
-              'border-red-500': userForm.get('userName')?.invalid && (userForm.get('userName')?.touched || submitted)
-            }"
+            class="w-full px-4 py-2 border rounded-xl outline-none"
+            [class.border-red-500]="userForm.get('userName')?.invalid && (userForm.get('userName')?.touched || submitted)"
+            [class.border-slate-200]="!(userForm.get('userName')?.invalid && (userForm.get('userName')?.touched || submitted))"
           />
           <p
             *ngIf="userForm.get('userName')?.errors?.['required'] &&
@@ -60,11 +56,9 @@
             formControlName="userPhoneNumber"
             type="text"
             placeholder="Phone"
-            class="w-full px-4 py-2 border rounded-xl"
-            [ngClass]="{
-              'border-red-500': userForm.get('userPhoneNumber')?.invalid &&
-                (userForm.get('userPhoneNumber')?.touched || submitted)
-            }"
+            class="w-full px-4 py-2 border rounded-xl outline-none"
+            [class.border-red-500]="userForm.get('userPhoneNumber')?.invalid && (userForm.get('userPhoneNumber')?.touched || submitted)"
+            [class.border-slate-200]="!(userForm.get('userPhoneNumber')?.invalid && (userForm.get('userPhoneNumber')?.touched || submitted))"
           />
           <p
             *ngIf="userForm.get('userPhoneNumber')?.errors?.['required'] &&
@@ -88,11 +82,9 @@
             formControlName="userPassword"
             type="password"
             placeholder="Password"
-            class="w-full px-4 py-2 border rounded-xl"
-            [ngClass]="{
-              'border-red-500': userForm.get('userPassword')?.invalid &&
-                (userForm.get('userPassword')?.touched || submitted)
-            }"
+            class="w-full px-4 py-2 border rounded-xl outline-none"
+            [class.border-red-500]="userForm.get('userPassword')?.invalid && (userForm.get('userPassword')?.touched || submitted)"
+            [class.border-slate-200]="!(userForm.get('userPassword')?.invalid && (userForm.get('userPassword')?.touched || submitted))"
           />
           <p
             *ngIf="userForm.get('userPassword')?.errors?.['required'] &&
@@ -114,21 +106,15 @@
         <div formArrayName="addresses" class="space-y-3">
           <label class="text-sm font-medium">Addresses</label>
 
-          <div
-            *ngFor="let addr of addresses.controls; let i = index"
-            [formGroupName]="i"
-          >
+          <div *ngFor="let addr of addresses.controls; let i = index" [formGroupName]="i">
             <textarea
               formControlName="fullAddress"
               rows="2"
-              class="w-full px-4 py-2 border rounded-xl"
+              class="w-full px-4 py-2 border rounded-xl outline-none"
               placeholder="Full Address"
-              [ngClass]="{
-                'border-red-500': addr.get('fullAddress')?.invalid &&
-                  (addr.get('fullAddress')?.touched || submitted)
-              }"
+              [class.border-red-500]="addr.get('fullAddress')?.invalid && (addr.get('fullAddress')?.touched || submitted)"
+              [class.border-slate-200]="!(addr.get('fullAddress')?.invalid && (addr.get('fullAddress')?.touched || submitted))"
             ></textarea>
-
             <p
               *ngIf="addr.get('fullAddress')?.errors?.['required'] &&
                      (addr.get('fullAddress')?.touched || submitted)"
@@ -170,7 +156,6 @@
             <th class="px-6 py-3 text-right">Actions</th>
           </tr>
         </thead>
-
         <tbody>
           <tr *ngFor="let u of users" class="border-t">
             <td class="px-6 py-3">{{ u.userName }}</td>
@@ -193,27 +178,20 @@
 <div *ngIf="showPasswordModal" class="fixed inset-0 flex items-center justify-center bg-black/40">
   <div class="bg-white p-6 rounded-2xl w-full max-w-md">
     <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="space-y-4">
-
       <input type="password" formControlName="oldPassword" placeholder="Old Password" class="w-full border px-4 py-2 rounded-xl" />
       <input type="password" formControlName="newPassword" placeholder="New Password" class="w-full border px-4 py-2 rounded-xl" />
       <input type="password" formControlName="confirmPassword" placeholder="Confirm Password" class="w-full border px-4 py-2 rounded-xl" />
 
       <p
-        *ngIf="passwordForm.errors?.['passwordMismatch'] &&
-               (passwordForm.touched || submitted)"
+        *ngIf="passwordForm.errors?.['passwordMismatch'] && (passwordForm.touched || submitted)"
         class="text-xs text-red-500"
       >
         Passwords do not match
       </p>
 
-      <button
-        type="submit"
-        [disabled]="passwordForm.invalid"
-        class="w-full bg-indigo-600 text-white py-2 rounded-xl"
-      >
+      <button type="submit" [disabled]="passwordForm.invalid" class="w-full bg-indigo-600 text-white py-2 rounded-xl">
         Update Password
       </button>
-
     </form>
   </div>
 </div>
